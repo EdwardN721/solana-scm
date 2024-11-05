@@ -12,7 +12,10 @@ describe('solana-scm', () => {
     const registryName = "Registro 1";
     const deviceName = "Sensor";
     const descriptionDevice  = "Sensor oficina";
+    const deviceData = ["Humedad", "25%"];
+    const deviceMetadata = ["Bateria", "65%"];
 //ID dispositivos
+
     const tx = await program.rpc.createRegistry(registryName , {
       accounts: {
         registry: registry,
@@ -21,7 +24,7 @@ describe('solana-scm', () => {
       },
     });
 
-    const tx2 = await program.rpc.addDevice(registryName, deviceName, descriptionDevice, {
+    const tx2 = await program.rpc.addDevice(registryName, deviceName, descriptionDevice, deviceData, deviceMetadata, {
       accounts: {
         registry: registry,
         user: userAccount,
