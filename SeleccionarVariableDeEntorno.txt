@@ -1,0 +1,13 @@
+ 1. Verifica el Archivo de Clave
+Abre una terminal y ejecuta el siguiente comando para verificar que el archivo de clave está presente
+    ls ~/.config/solana/id.json
+
+2. Configura la Variable de Entorno ANCHOR_WALLET
+Configurar la variable de entorno ANCHOR_WALLET
+    export ANCHOR_WALLET="$HOME/.config/solana/id.json"
+
+3.Verifica la Configuración de la Variable de Entorno
+Ejecuta el siguiente comando para comprobar que la variable ANCHOR_WALLET está configurada correctamente
+    echo $ANCHOR_WALLET
+
+Deberías ver la ruta que acabas de configurar (/home/tu_usuario/.config/solana/id.json)

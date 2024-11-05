@@ -1,0 +1,6 @@
+1) Paquete @project-serum/anchor esté instalado en tu proyecto. 
+    npm install @project-serum/anchor
+
+2) Esta biblioteca proporciona herramientas para realizar pruebas de integración en React, Angular y otros frameworks.
+    npm install --save-dev @testing-library/jest-dom
+    
