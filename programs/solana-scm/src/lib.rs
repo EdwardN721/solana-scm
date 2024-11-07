@@ -6,6 +6,12 @@ declare_id!("A5i8uPKdCycDG3nbGCCAUiLzHEc4ddpfeYGQhPEWuaTJ"); // Identificador ú
 pub mod registry_project {
     use super::*;
 
+    pub fn get_registry_public_key(ctx: Context<GetRegistryPublicKey>, _registry_name: String) -> Result<Pubkey> {
+        // En este caso, no se utiliza la variable registry_name
+        let registry = &ctx.accounts.registry;
+        Ok(registry.key())
+    }
+
     pub fn create_registry(ctx: Context<CreateRegistry>, name: String) -> Result<()> {
         // Validar longitud del nombre
         if name.len() > 64 {
@@ -186,6 +192,14 @@ pub struct SetDeviceMetadataParam<'info> {
     pub contract: Account<'info, Contract>,
     #[account(mut)]
     pub user: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct GetRegistryPublicKey<'info> {
+    #[account(mut)]
+    pub registry: Account<'info, Registry>,
+    #[account(mut)]
+    pub user: Signer<'info>, // Puedes incluir el usuario si lo necesitas para autorización
 }
 
 #[error_code]
