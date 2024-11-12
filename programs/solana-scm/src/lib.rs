@@ -1,14 +1,15 @@
 use anchor_lang::prelude::*; // Incluye el prelude para simplificar imports en Anchor
 
-declare_id!("A5i8uPKdCycDG3nbGCCAUiLzHEc4ddpfeYGQhPEWuaTJ"); // Identificador único del programa en Solana
+declare_id!("GzQkzkgiYYDtwtz3bx6MZmAwLvLBn2B2Tn5JMvDJVGgr"); // Identificador único del programa en Solana
 
 #[program]
 pub mod registry_project {
     use super::*;
 
     pub fn get_registry_public_key(ctx: Context<GetRegistryPublicKey>, _registry_name: String) -> Result<Pubkey> {
-        // En este caso, no se utiliza la variable registry_name
         let registry = &ctx.accounts.registry;
+        let registry_public_key = registry.key();
+        println!("La clave pública del registro es: {}", registry_public_key);
         Ok(registry.key())
     }
 
