@@ -1,234 +1,122 @@
-use anchor_lang::prelude::*; // Incluye el prelude para simplificar imports en Anchor
+// src/lib.rs
 
-declare_id!("GzQkzkgiYYDtwtz3bx6MZmAwLvLBn2B2Tn5JMvDJVGgr"); // Identificador único del programa en Solana
+// Importa la biblioteca de Anchor para construir programas en Solana.
+use anchor_lang::prelude::*;
 
+// Declara la ID del programa, necesaria para interactuar con la blockchain.
+declare_id!("21dr8CYgZFHh8E1DjNqRYXjAUaz76VsziQ3CVr7RgJao");
+
+/// Módulo principal del programa que implementa la lógica de negocio.
 #[program]
-pub mod registry_project {
+pub mod solana {
     use super::*;
 
-    pub fn get_registry_public_key(ctx: Context<GetRegistryPublicKey>, _registry_name: String) -> Result<Pubkey> {
-        let registry = &ctx.accounts.registry;
-        let registry_public_key = registry.key();
-        println!("La clave pública del registro es: {}", registry_public_key);
-        Ok(registry.key())
-    }
-
-    pub fn create_registry(ctx: Context<CreateRegistry>, name: String) -> Result<()> {
-        // Validar longitud del nombre
-        if name.len() > 64 {
+    /// Función para crear un registro. 
+    /// Se asegura de que el nombre del registro no exceda los 64 caracteres y 
+    /// inicializa las propiedades principales del registro.
+    ///
+    /// # Parámetros
+    /// - `ctx`: Contexto que contiene las cuentas necesarias para esta operación.
+    /// - `registry_name`: El nombre del registro a crear.
+    pub fn create_registry(ctx: Context<CreateRegistry>, registry_name: String) -> Result<()> {
+        // Valida la longitud del nombre del registro.
+        if registry_name.len() > 64 {
             return Err(RegistryError::NameTooLong.into());
         }
 
+        // Inicializa el registro con los datos proporcionados.
         let registry = &mut ctx.accounts.registry;
-        registry.name = name;
-        registry.owner_id = *ctx.accounts.user.key;
-        registry.device_count = 0;
-        registry.device_ids = vec![];
-        registry.devices = vec![];
+        registry.name = registry_name;
+        registry.device_count = 0; // No hay dispositivos inicialmente.
+        registry.device_ids = vec![]; // Lista vacía de dispositivos.
+
+        // Mensajes informativos para el usuario.
+        msg!("Registro creado con el nombre: {}", registry.name);
+        msg!("Contador iniciado en {}", registry.device_count);
 
         Ok(())
     }
 
+    /// Función para agregar un dispositivo a un registro existente.
+    /// Se guarda la información básica del dispositivo y se actualiza el registro.
+    ///
+    /// # Parámetros
+    /// - `ctx`: Contexto que contiene las cuentas necesarias para esta operación.
+    /// - `device_name`: Nombre del dispositivo a agregar.
+    /// - `device_description`: Descripción del dispositivo a agregar.
     pub fn add_device(
         ctx: Context<AddDevice>,
-        name: String,
-        description: String,
-        metadata: Vec<(String, String)>,
-        data: Vec<(String, String)>
-    ) -> Result<()> {
-        let registry = &mut ctx.accounts.registry;
-
-        // Validar que el dispositivo no exista
-        if registry.devices.iter().any(|(n, _)| *n == name) {
-            return Err(RegistryError::DeviceNotFound.into());
-        }
-
-        // Crear el nuevo dispositivo y agregarlo al registro
-        let device = Device {
-            name: name.clone(),
-            description,
-            metadata,
-            data,
-        };
-
-        registry.device_count += 1;
-        registry.device_ids.push(ctx.accounts.device.key());
-        registry.devices.push((name, device));
-        Ok(())
-    }
-
-    pub fn set_device_metadata(
-        ctx: Context<SetDeviceMetadata>,
-        name: String,
-        metadata: Vec<(String, String)>,
-    ) -> Result<()> {
-        let registry = &mut ctx.accounts.registry;
-        let device = registry.devices.iter_mut()
-            .find(|(n, _)| *n == name)
-            .ok_or(RegistryError::DeviceNotFound)?;
-        device.1.metadata = metadata;
-        Ok(())
-    }
-
-    pub fn set_device_data(
-        ctx: Context<SetDeviceData>,
-        name: String,
-        data: Vec<(String, String)>,
-    ) -> Result<()> {
-        let registry = &mut ctx.accounts.registry;
-        let device = registry.devices.iter_mut()
-            .find(|(n, _)| *n == name)
-            .ok_or(RegistryError::DeviceNotFound)?;
-        device.1.data = data;
-        Ok(())
-    }
-
-    pub fn set_device_metadata_param(
-        ctx: Context<SetDeviceMetadataParam>,
-        registry_name: String,
         device_name: String,
-        param: String,
-        value: String,
+        device_description: String,
     ) -> Result<()> {
-        let contract = &mut ctx.accounts.contract;
+        // Inicializa y guarda la información del dispositivo.
+        let device = &mut ctx.accounts.device;
+        device.name = device_name;
+        device.description = device_description;
 
-        // Buscar el registro y validar que el usuario es el propietario
-        let registry = contract.registries.iter_mut()
-            .find(|(n, _)| *n == registry_name)
-            .ok_or(RegistryError::RegistryNotFound)?;
+        // Actualiza el registro con el nuevo dispositivo.
+        let registry = &mut ctx.accounts.registry;
+        registry.device_count += 1; // Incrementa el contador de dispositivos.
+        registry.device_ids.push(device.key()); // Guarda la clave pública del dispositivo.
 
-        if &registry.1.owner_id != ctx.accounts.user.key {
-            return Err(RegistryError::UnauthorizedAccess.into());
-        }
+        // Mensajes informativos para el usuario.
+        msg!("Dispositivo creado: {}", device.name);
+        msg!("Descripción: {}", device.description);
 
-        // Buscar el dispositivo y actualizar el parámetro de metadata
-        let device = registry.1.devices.iter_mut()
-            .find(|(n, _)| *n == device_name)
-            .ok_or(RegistryError::DeviceNotFound)?;
-
-        device.1.metadata.push((param, value));
         Ok(())
     }
 }
 
+/// Estructura que representa un registro en la blockchain.
+/// Un registro puede contener múltiples dispositivos.
 #[account]
 pub struct Registry {
-    pub device_count: u64,
-    pub device_ids: Vec<Pubkey>,
-    pub name: String,
-    pub owner_id: Pubkey,
-    pub devices: Vec<(String, Device)>,
+    pub device_count: u64,        // Número de dispositivos registrados.
+    pub device_ids: Vec<Pubkey>, // Claves públicas de los dispositivos asociados.
+    pub name: String,            // Nombre del registro.
 }
 
-impl Registry {
-    const MAX_DEVICES: usize = 100;
-    const MAX_NAME_LENGTH: usize = 64;
-    const MAX_DEVICE_ID_SIZE: usize = 32;
-    const MAX_METADATA_LENGTH: usize = 256;
-    const MAX_DESCRIPTION_LENGTH: usize = 256;
-
-    const LEN: usize = 8 + 8 + (Self::MAX_DEVICES * Self::MAX_DEVICE_ID_SIZE) + (Self::MAX_NAME_LENGTH + 4) + 32 + (Self::MAX_DEVICES * (Self::MAX_NAME_LENGTH + Self::MAX_METADATA_LENGTH + Self::MAX_DESCRIPTION_LENGTH + 4 + 4));
-}
-
+/// Estructura que representa un dispositivo individual.
 #[account]
 pub struct Device {
-    pub name: String,
-    pub metadata: Vec<(String, String)>,
-    pub data: Vec<(String, String)>,
-    pub description: String,
+    pub name: String,        // Nombre del dispositivo.
+    pub description: String, // Descripción del dispositivo.
 }
 
-impl Device {
-    const MAX_NAME_LENGTH: usize = 64;
-    const MAX_METADATA_LENGTH: usize = 256;
-    const MAX_DESCRIPTION_LENGTH: usize = 256;
-
-    const LEN: usize = 8 + (Self::MAX_NAME_LENGTH + 4) + (Self::MAX_METADATA_LENGTH * 2 + 4) + (Self::MAX_DESCRIPTION_LENGTH + 4);
-}
-
-#[account]
-pub struct Contract {
-    pub registries: Vec<(String, Registry)>,
-}
-
+/// Contexto necesario para crear un registro.
+/// Contiene las cuentas implicadas en esta operación.
 #[derive(Accounts)]
 pub struct CreateRegistry<'info> {
-    #[account(init, payer = user, space = Registry::LEN)]
-    pub registry: Account<'info, Registry>,
+    #[account(init, payer = user, space = 8 + 8 + 32 * 100)] // Espacio para el registro.
+    pub registry: Account<'info, Registry>, // Cuenta que almacenará el registro.
     #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
+    pub user: Signer<'info>, // Usuario que paga por la creación del registro.
+    pub system_program: Program<'info, System>, // Programa del sistema para inicializar cuentas.
 }
 
+/// Contexto necesario para agregar un dispositivo a un registro.
+/// Contiene las cuentas implicadas en esta operación.
 #[derive(Accounts)]
 pub struct AddDevice<'info> {
     #[account(mut)]
-    pub registry: Account<'info, Registry>,
-    #[account(init, payer = user, space = Device::LEN)]
-    pub device: Account<'info, Device>,
+    pub registry: Account<'info, Registry>, // Registro al que se añadirá el dispositivo.
+    #[account(init, payer = user, space = 8 + 32 + 32)] // Espacio para el dispositivo.
+    pub device: Account<'info, Device>, // Cuenta que almacenará el dispositivo.
     #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
+    pub user: Signer<'info>, // Usuario que paga por la creación del dispositivo.
+    pub system_program: Program<'info, System>, // Programa del sistema para inicializar cuentas.
 }
 
-#[derive(Accounts)]
-pub struct SetDeviceMetadata<'info> {
-    #[account(mut)]
-    pub registry: Account<'info, Registry>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct SetDeviceData<'info> {
-    #[account(mut)]
-    pub registry: Account<'info, Registry>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct SetDeviceMetadataParam<'info> {
-    #[account(mut)]
-    pub contract: Account<'info, Contract>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct GetRegistryPublicKey<'info> {
-    #[account(mut)]
-    pub registry: Account<'info, Registry>,
-    #[account(mut)]
-    pub user: Signer<'info>, // Puedes incluir el usuario si lo necesitas para autorización
-}
-
+/// Enumeración de errores personalizados del programa.
+/// Define los posibles errores que pueden ocurrir durante la ejecución.
 #[error_code]
 pub enum RegistryError {
     #[msg("Registro no encontrado.")]
-    RegistryNotFound,
+    RegistryNotFound, // Error si no se encuentra un registro.
     #[msg("Dispositivo no encontrado.")]
-    DeviceNotFound,
+    DeviceNotFound, // Error si no se encuentra un dispositivo.
     #[msg("Acceso no autorizado.")]
-    UnauthorizedAccess,
+    UnauthorizedAccess, // Error si un usuario no está autorizado.
     #[msg("El nombre es demasiado largo.")]
-    NameTooLong,
-}
-
-impl Contract {
-    pub fn validate_exists_registry(&self, registry_name: &String) -> bool {
-        self.registries.iter().any(|(n, _)| *n == *registry_name)
-    }
-
-    pub fn validate_owner(&self, registry_name: String, signer_account: &Pubkey) -> bool {
-        if let Some((_, registry)) = self.registries.iter().find(|(n, _)| *n == registry_name) {
-            &registry.owner_id == signer_account
-        } else {
-            false
-        }
-    }
-    
-    pub fn validate_exists_device(&self, registry: &Registry, device_name: &String) -> bool {
-        registry.devices.iter().any(|(n, _)| *n == *device_name)
-    }
+    NameTooLong, // Error si el nombre excede la longitud permitida.
 }
