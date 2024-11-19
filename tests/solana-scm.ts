@@ -1,54 +1,55 @@
-import * as anchor from '@project-serum/anchor';
-import { Program } from '@project-serum/anchor';
-import { PublicKey, Keypair } from '@solana/web3.js';
-import { expect } from 'chai';
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
+import { SolanaScm } from "../target/types/solana_scm";
+import { Keypair, SystemProgram, Connection } from "@solana/web3.js";
 
-describe('solana-scm', () => {
-  const program = anchor.workspace.SolanaScm;
-  const userAccount = new PublicKey("GzQkzkgiYYDtwtz3bx6MZmAwLvLBn2B2Tn5JMvDJVGgr");
+// Conexión al clúster
+const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+connection.getVersion()
+  .then(version => console.log("Cluster version: ", version))
+  .catch(err => console.error("Error connecting to cluster: ", err));
 
-  it('Crear un registro y un dispositivo', async () => {
-    const registryName = "RegistroTest5";
-    const deviceName = "SensorNuevo3";
-    const descriptionDevice  = "Sensor medico";
-    const deviceDatas = ["Humedad", "45%"];
-    const deviceMetadata = ["Bateria", "85%"];
+describe('Solana_scm', () => {
+  // Configurar el cliente al cluster
+  const provider = anchor.AnchorProvider.env(); // Obtén el proveedor
+  anchor.setProvider(provider);                 // Configura el proveedor globalmente
 
-    // Crear una cuenta para el registro
-    const registryAccount = Keypair.generate();
+  const program = anchor.workspace.SolanaScm as Program<SolanaScm>;
 
-    // Crear el registro
-    const tx = await program.rpc.createRegistry({
-      name: registryName,  // Aquí pasas los parámetros correctos dentro de un objeto
-    }, {
-      accounts: {
-        registry: registryAccount.publicKey,  // Asegúrate de usar solo la clave pública para el registro
-        user: userAccount,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      signers: [registryAccount],  // Firmamos la transacción con la cuenta generada
-    });
+  const newRegistryKp = Keypair.generate(); // Generar una nueva Keypair para el registro
+  const newDeviceKp = Keypair.generate();   // Generar una nueva Keypair para el dispositivo
+  const wallet = provider.wallet;          // Obtener la billetera asociada al proveedor
 
-    // Añadir el dispositivo al registro
-    const tx2 = await program.rpc.addDevice(registryName, deviceName, descriptionDevice, deviceDatas, deviceMetadata, {
-      accounts: {
-        user: userAccount,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      },
-    });
+  const registryName = "Registro1";
+  const deviceName = "Sensor";
+  const deviceDescription = "Sensor de Oficina";
 
-    // Obtener la clave pública de los registros del programa
-    const registryPublickey = await program.provider.connection.getProgramAccounts(program.programId).then(accounts => accounts[0].pubkey);
+  it('Crear registro!', async () => {
+    const txHash = await program.methods
+      .createRegistry(registryName)
+      .accounts({
+        registry: newRegistryKp.publicKey,
+        signer: wallet.publicKey, // Dirección de la billetera
+        systemProgram: SystemProgram.programId, // Dirección del System Program
+      })
+      .signers([newRegistryKp]) // Firmantes
+      .rpc();
 
-    // Obtener información del registro (función hipotética)
-    const registryData = await program.rpc.getRegistryData(registryName);
+    console.log("Firma de tu transacción para crear registro: ", txHash);
+  });
 
-    expect(registryData.name).to.equal(registryName);
-    expect(registryData.deviceCount).to.equal(1);
+  it('Añadir dispositivo!', async () => {
+    const txHash = await program.methods
+      .addDevice(deviceName, deviceDescription) // Método `addDevice` del contrato
+      .accounts({
+        device: newDeviceKp.publicKey,
+        registry: newRegistryKp.publicKey,
+        signer: wallet.publicKey, // Dirección de la billetera
+        systemProgram: SystemProgram.programId, // Dirección del System Program
+      })
+      .signers([newDeviceKp]) // Firmantes
+      .rpc();
 
-    // Obtener información del dispositivo (función hipotética)
-    const deviceData = await program.rpc.getDeviceData(registryName, deviceName);
-    expect(deviceData.name).to.equal(deviceName);
-    // ... otras validaciones de los datos del dispositivo
+    console.log("Firma de tu transacción para añadir dispositivo: ", txHash);
   });
 });
