@@ -53,3 +53,4 @@ describe('Solana_scm', () => {
     console.log("Firma de tu transacción para añadir dispositivo: ", txHash);
   });
 });
+ 

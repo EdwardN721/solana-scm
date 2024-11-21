@@ -2,7 +2,7 @@
 use anchor_lang::prelude::*;
 
 // Declara la ID del programa, necesaria para interactuar con la blockchain.
-declare_id!("21dr8CYgZFHh8E1DjNqRYXjAUaz76VsziQ3CVr7RgJao");
+declare_id!("GzQkzkgiYYDtwtz3bx6MZmAwLvLBn2B2Tn5JMvDJVGgr");
 
 #[program]
 pub mod solana_scm {
