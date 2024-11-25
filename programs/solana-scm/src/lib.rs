@@ -1,8 +1,6 @@
-// Importa la biblioteca de Anchor para construir programas en Solana.
 use anchor_lang::prelude::*;
 
-// Declara la ID del programa, necesaria para interactuar con la blockchain.
-declare_id!("GzQkzkgiYYDtwtz3bx6MZmAwLvLBn2B2Tn5JMvDJVGgr");
+declare_id!("B1Zsgq3dVzAPq4KzTz3rPWVJKLWLtvfuxVohUcFNdHmY");
 
 #[program]
 pub mod solana_scm {
@@ -29,11 +27,13 @@ pub mod solana_scm {
     pub fn add_device(
         ctx: Context<AddDevice>, 
         device_name: String, 
-        device_description: String
+        device_description: String,
     ) -> Result<()> {
         let device = &mut ctx.accounts.device;
         device.name = device_name;
         device.description = device_description;
+        device.data = Vec::new();
+        device.metadata = Vec::new();
 
         let registry = &mut ctx.accounts.registry;
         registry.device_count += 1;
@@ -48,6 +48,46 @@ pub mod solana_scm {
 
         Ok(())
     }
+    pub fn set_device_data(
+        ctx: Context<SetDeviceData>,
+        device_name: String,
+        clave: String,
+        valor: String,
+    ) -> Result<()> {
+        let device = &mut ctx.accounts.device;
+
+        // Verificar que el nombre del dispositivo coincida
+        if device.name != device_name {
+            return Err(ErrorCode::DeviceNotFound.into());
+        }
+
+        // Añadir el par clave-valor al vector data
+        device.data.push((clave, valor));
+
+        msg!("Datos añadidos al dispositivo: {:?}", device.data);
+        Ok(())
+    }
+
+    pub fn set_device_metadata(
+        ctx: Context<SetDeviceMetaData>,
+        device_name: String,
+        clave: String,
+        valor: String,
+    ) -> Result<()> {
+        let device = &mut ctx.accounts.device;
+
+        // Verificar que el nombre del dispositivo coincida
+        if device.name != device_name {
+            return Err(ErrorCode::DeviceNotFound.into());
+        }
+
+        // Añadir el par clave-valor al vector metadata
+        device.metadata.push((clave, valor));
+
+        msg!("Metadatos añadidos al dispositivo: {:?}", device.metadata);
+        Ok(())
+    }
+    
 }
 
 #[derive(Accounts)]
@@ -68,7 +108,7 @@ pub struct AddDevice<'info>{
     #[account(
         init, 
         payer = signer, 
-        space = 8 + 32 + 32,  // Si planeas almacenar solo 5 dispositivos
+        space = 8 + 32 + 32 + (4 + (50 * 64)) + (4 + (50 * 64)),  // Si planeas almacenar solo 5 dispositivos
     )]
     pub device: Account<'info, Device>,
     #[account(mut)]
@@ -76,6 +116,26 @@ pub struct AddDevice<'info>{
     #[account(mut)]
     pub signer: Signer<'info>,
     pub system_program: Program<'info, System>
+}
+
+#[derive(Accounts)]
+pub struct SetDeviceData<'info>{
+    #[account(mut)]
+    pub registry: Account<'info, Registry>,
+    #[account(mut)]
+    pub device: Account<'info, Device>,
+    #[account(mut)]
+    pub user: Signer<'info>,    
+}
+
+#[derive(Accounts)]
+pub struct SetDeviceMetaData<'info>{
+    #[account(mut)]
+    pub registry: Account<'info, Registry>,
+    #[account(mut)]
+    pub device: Account<'info, Device>,
+    #[account(mut)]
+    pub user: Signer<'info>,    
 }
 
 #[account]
@@ -88,11 +148,15 @@ pub struct Registry {
 #[account]
 pub struct Device {
     pub name: String,
-    pub description: String
+    pub description: String,
+    pub data: Vec<(String, String)>,
+    pub metadata: Vec<(String, String)>,
 }
 
 #[error_code]
 pub enum ErrorCode {
     #[msg("Nombre del registro muy largo!.")]
     NameTooLong,
+    #[msg("Dispositivo no encontrado!.")]
+    DeviceNotFound,
 }
