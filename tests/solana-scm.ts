@@ -11,25 +11,26 @@ describe('Solana_scm', () => {
 
   const newRegistryKp = Keypair.generate();
   const newDeviceKp = Keypair.generate();
+  
   const wallet = provider.wallet;
 
-  const registryName = "Registro Prueba 3";
+  const registryName = "Registro Test 6";
   const deviceName = "Sensor";
   const deviceDescription = "Sensor para área de agricultura";
 
- const claveData = "Temperatura";
- const valorData = "15°";
+  const claveData = "Temperatura";
+  const valorData = "15°";
 
  const claveMetaData = "Bateria";
- const valorMetaData = "85%";
+ const valorMetaData = "85%"; 
 
   it('Crear registro!', async () => {
     console.log("Creando registro con publicKey:", newRegistryKp.publicKey.toBase58());
     const txHash = await program.methods
-      .createRegistry(registryName)
+      .createRegitry(registryName)
       .accounts({
         registry: newRegistryKp.publicKey,
-        signer: wallet.publicKey,
+        user: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
       .signers([newRegistryKp])
@@ -41,53 +42,55 @@ describe('Solana_scm', () => {
     console.log("Registro inicializado: ", registryAccount);
   });
 
+  // Añadir dispositivo a registro ya añadido
+  //const idRegistry = new PublicKey("BUXXwssQ6en5UnaRoD6z4JXQmApuqScK9ns7yg22rAj1");
+  
   it('Añadir dispositivo!', async () => {
     const txHash = await program.methods
       .addDevice(deviceName, deviceDescription)
       .accounts({
         device: newDeviceKp.publicKey,
         registry: newRegistryKp.publicKey,
-        signer: wallet.publicKey,
+        user: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
       .signers([newDeviceKp])
       .rpc();
 
     console.log("Firma de tu transacción para añadir dispositivo: ", txHash);
-  }); 
+  });
 
-  // Añadir dispositivo a registro ya añadido
-  /* const deviceName2 = "Sensor 3";
-  const deviceDescription2 = "Sensor para pasillos";
+
   const newDeviceKp2 = Keypair.generate();
 
-  const idRegistry = new PublicKey("BUXXwssQ6en5UnaRoD6z4JXQmApuqScK9ns7yg22rAj1");
+  const deviceName2 = "Sensor A45UG3";
+  const deviceDescription2 = "Sensor de pasillo chico";
+
   it('Añadir dispositivo!', async () => {
     const txHash = await program.methods
       .addDevice(deviceName2, deviceDescription2)
       .accounts({
         device: newDeviceKp2.publicKey,
-        registry: idRegistry,
-        signer: wallet.publicKey,
+        registry: newRegistryKp.publicKey,
+        user: wallet.publicKey,
         systemProgram: SystemProgram.programId,
       })
       .signers([newDeviceKp2])
       .rpc();
 
     console.log("Firma de tu transacción para añadir dispositivo: ", txHash);
-  }); */
+  });
 
 
-/*   
-  Agregar los metadataos y datos
-  const IdDevice = new PublicKey("9PEzkfJZgqtTz8HGV4gvFgcY3CcYE7LnNwY6o61ddaz6");
-  const idRegistry = new PublicKey("bmx1MYJT3ZHqMjvAfFrZUw8oAKMcprmcC33MMkF8KuD");
+
+  //Agregar los metadataos y datos
+  
   it('Añadir datos al dispositivo!', async () => {
     const txHash = await program.methods
-      .setDeviceData(deviceName, claveData, valorData)
+      .setDeviceData(newDeviceKp.publicKey, claveData, valorData)
       .accounts({
-        device: IdDevice,
-        registry: idRegistry,
+        device: newDeviceKp.publicKey,
+        registry: newRegistryKp.publicKey,
         user: wallet.publicKey,
       })
       .rpc();
@@ -97,10 +100,10 @@ describe('Solana_scm', () => {
  
   it('Añadir metadata al dispositivo!', async () => {
     const txHash = await program.methods
-      .setDeviceMetadata(deviceName, claveMetaData, valorMetaData)
+      .setDeviceMetadata(newDeviceKp.publicKey, claveMetaData, valorMetaData)
       .accounts({
-        device: IdDevice,
-        registry: idRegistry,
+        device: newDeviceKp.publicKey,
+        registry: newRegistryKp.publicKey,
         user: wallet.publicKey,
       })
       .rpc();
@@ -108,6 +111,40 @@ describe('Solana_scm', () => {
     console.log("Transacción enviada para añadir metadata: ", txHash);
   });
 
- */  console.log("Métodos disponibles:", Object.keys(program.methods));
 
-});
+  const claveData2 = "Altura";
+  const valorData2 = "5M";
+
+  const claveMetaData2 = "Idioma";
+  const valorMetaData2 = "Español";
+
+  it('Añadir datos al dispositivo!', async () => {
+    const txHash = await program.methods
+      .setDeviceData(newDeviceKp.publicKey, claveData2, valorData2)
+      .accounts({
+        device: newDeviceKp.publicKey,
+        registry: newRegistryKp.publicKey,
+        user: wallet.publicKey,
+      })
+      .rpc();
+
+    console.log("Transacción enviada para añadir datos: ", txHash);
+  }); 
+ 
+  it('Añadir metadata al dispositivo!', async () => {
+    const txHash = await program.methods
+      .setDeviceMetadata(newDeviceKp.publicKey, claveMetaData2, valorMetaData2)
+      .accounts({
+        device: newDeviceKp.publicKey,
+        registry: newRegistryKp.publicKey,
+        user: wallet.publicKey,
+      })
+      .rpc();
+
+    console.log("Transacción enviada para añadir metadata: ", txHash);
+  });
+
+
+  console.log("Métodos disponibles:", Object.keys(program.methods));
+
+})
